@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="apple-mobile-web-app-title" content="Sealed Scout"/>
+<title>Sealed Scout</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{
+  --ink:#0e0e18; --card:#181826; --lift:#21213a; --rim:#ffffff0d;
+  --bronze:#b8812a; --bronze2:#d4a245; --parch:#ede4ce; --dim:#6b6880;
+  --deal:#3ecf72; --over:#e05c5c; --warn:#f0b429; --blue:#4a9eca;
+  --st:env(safe-area-inset-top,0px); --sb:env(safe-area-inset-bottom,0px);
+  --sl:env(safe-area-inset-left,0px); --sr:env(safe-area-inset-right,0px);
+}
+html{height:100%;background:var(--ink);overscroll-behavior:none}
+body{min-height:100dvh;background:var(--ink);color:var(--parch);
+  font-family:-apple-system,"SF Pro Text","Helvetica Neue",sans-serif;
+  -webkit-font-smoothing:antialiased;display:flex;flex-direction:column}
+
+/* Header */
+.hdr{padding:calc(var(--st)+11px) calc(var(--sr)+16px) 11px calc(var(--sl)+16px);
+  background:linear-gradient(180deg,#12121e,var(--ink));
+  border-bottom:1px solid var(--rim);flex-shrink:0}
+.hdr-in{max-width:680px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:8px}
+.logo{display:flex;align-items:center;gap:8px}
+.logo h1{font-size:19px;font-weight:700;letter-spacing:-.3px;
+  background:linear-gradient(90deg,#b8812a,#e8c96a,#b8812a);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.pill{font-size:11px;color:var(--dim);background:var(--card);
+  border:1px solid var(--rim);border-radius:20px;padding:3px 9px;white-space:nowrap}
+.pill b{color:var(--bronze2)}
+
+/* Install tip */
+.tip{background:#1a1810;border-bottom:1px solid #b8812a33;
+  padding:8px calc(var(--sr)+16px) 8px calc(var(--sl)+16px);
+  display:flex;align-items:center;justify-content:space-between;gap:10px;flex-shrink:0}
+.tip p{font-size:11px;color:#a09060;line-height:1.4}
+.tip b{color:var(--bronze2)}
+.tip button{background:none;border:none;color:var(--dim);font-size:16px;cursor:pointer;padding:0 2px;flex-shrink:0}
+.tip.gone{display:none}
+
+/* Search */
+.srch{padding:11px calc(var(--sr)+16px) 10px calc(var(--sl)+16px);
+  background:var(--card);border-bottom:1px solid var(--rim);flex-shrink:0}
+.srch-in{max-width:680px;margin:0 auto}
+.tabs{display:flex;gap:6px;margin-bottom:10px}
+.tab{padding:6px 14px;border-radius:18px;border:none;cursor:pointer;
+  font-size:13px;font-weight:600;font-family:inherit;transition:all .15s}
+.tab.on{background:var(--bronze);color:#0e0e18}
+.tab.off{background:var(--lift);color:var(--dim)}
+.irow{display:flex;gap:7px}
+.ibox{flex:1;position:relative}
+.si{width:100%;height:44px;background:var(--ink);border:1.5px solid #2a2a40;
+  border-radius:10px;padding:0 13px;color:var(--parch);font-size:16px;
+  font-family:inherit;outline:none;transition:border-color .15s;-webkit-appearance:none}
+.si:focus{border-color:var(--bronze)}
+.si::placeholder{color:#333348}
+.drop{position:absolute;top:calc(100%+4px);left:0;right:0;
+  background:var(--lift);border:1px solid #b8812a44;border-radius:10px;
+  z-index:100;max-height:230px;overflow-y:auto;-webkit-overflow-scrolling:touch;
+  box-shadow:0 14px 36px #00000099;display:none}
+.ditem{padding:10px 13px;font-size:14px;color:var(--parch);
+  border-bottom:1px solid var(--rim);cursor:pointer}
+.ditem:last-child{border-bottom:none}
+.ditem:active,.ditem.hi{background:#b8812a18;color:var(--bronze2)}
+.go{height:44px;padding:0 17px;border-radius:10px;border:none;
+  background:var(--bronze);color:#0e0e18;font-weight:700;font-size:14px;
+  font-family:inherit;cursor:pointer;white-space:nowrap;flex-shrink:0}
+.go:disabled{background:var(--lift);color:#333348;cursor:default}
+.go:not(:disabled):active{opacity:.75}
+
+/* Scroll */
+.scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;
+  padding:14px calc(var(--sr)+16px) calc(var(--sb)+24px) calc(var(--sl)+16px)}
+.inner{max-width:680px;margin:0 auto}
+
+/* Loading */
+.loading{display:flex;flex-direction:column;align-items:center;padding:52px 16px;gap:12px}
+.ring{width:34px;height:34px;border-radius:50%;
+  border:3px solid var(--lift);border-top-color:var(--bronze);
+  animation:spin .75s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.lmsg{color:var(--bronze2);font-size:13px;font-weight:600}
+.lsub{color:var(--dim);font-size:11px;text-align:center;line-height:1.8}
+
+/* Summary bar */
+.sumbar{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-bottom:12px}
+.sc{background:var(--card);border:1px solid var(--rim);border-radius:10px;padding:9px 10px;text-align:center}
+.sl{font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.09em;margin-bottom:2px}
+.sv{font-size:17px;font-weight:800;letter-spacing:-.2px}
+.ss{font-size:9px;color:var(--dim);margin-top:1px}
+
+/* TCG link */
+.tcgbar{background:#1a1708;border:1px solid #E6A81733;border-radius:10px;
+  padding:11px 14px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;gap:8px}
+.tcgl{font-size:10px;color:var(--dim);margin-bottom:1px}
+.tcgn{font-size:13px;font-weight:700;color:#E6A817}
+.tcga{padding:7px 12px;border-radius:8px;border:1px solid #E6A81755;
+  background:#E6A81710;color:#E6A817;font-size:11px;font-weight:700;
+  font-family:inherit;cursor:pointer;white-space:nowrap;text-decoration:none;display:inline-block}
+
+/* Section label */
+.sec{display:flex;align-items:center;gap:8px;margin:14px 0 9px}
+.sec span{font-size:10px;font-weight:700;text-transform:uppercase;
+  letter-spacing:.1em;color:var(--dim);white-space:nowrap}
+.sec::after{content:'';flex:1;height:1px;background:var(--rim)}
+
+/* Ranked list */
+.rlist{display:flex;flex-direction:column;gap:7px}
+
+/* Store row */
+.srow{background:var(--card);border:1px solid var(--rim);border-radius:11px;
+  padding:12px 14px;display:flex;align-items:stretch;gap:12px;position:relative;
+  overflow:hidden;transition:transform .12s}
+.srow:active{transform:scale(.99)}
+.srow.best{border-color:#3ecf7244}
+.srow.good{border-color:#b8812a33}
+
+/* Rank number */
+.rank{font-size:13px;font-weight:800;color:var(--dim);width:18px;
+  flex-shrink:0;display:flex;align-items:center;padding-top:1px}
+.rank.r1{color:var(--deal)}
+.rank.r2{color:var(--bronze2)}
+.rank.r3{color:var(--bronze)}
+
+/* Row body */
+.rbody{flex:1;min-width:0}
+.rname{font-size:13px;font-weight:700;color:var(--parch);margin-bottom:2px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rtitle{font-size:10px;color:var(--dim);margin-bottom:6px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* Deal bar — the signature visual element */
+.dbar-track{background:var(--lift);border-radius:3px;height:4px;overflow:hidden;margin-bottom:6px}
+.dbar-fill{height:100%;border-radius:3px;transition:width .6s ease}
+
+.rmeta{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.ship-tag{font-size:10px;padding:2px 7px;border-radius:5px;font-weight:600}
+.ship-free{background:#3ecf7218;color:var(--deal)}
+.ship-paid{background:var(--lift);color:var(--dim)}
+.total-tag{font-size:10px;color:var(--dim)}
+.view-link{font-size:10px;color:var(--blue);text-decoration:none;margin-left:auto;flex-shrink:0}
+
+/* Price column */
+.rprice{display:flex;flex-direction:column;align-items:flex-end;justify-content:center;
+  flex-shrink:0;gap:3px}
+.price-main{font-size:21px;font-weight:800;letter-spacing:-.3px;color:var(--parch)}
+.price-msrp{font-size:10px;color:var(--dim);text-decoration:line-through}
+.delta{font-size:10px;font-weight:700;padding:2px 6px;border-radius:5px;white-space:nowrap}
+.dg{background:#3ecf7218;color:var(--deal)}
+.dy{background:#f0b42918;color:var(--warn)}
+.dr{background:#e05c5c18;color:var(--over)}
+
+/* Show more */
+.showmore{width:100%;padding:11px;border-radius:10px;border:1px solid var(--rim);
+  background:var(--card);color:var(--dim);font-size:13px;font-weight:600;
+  font-family:inherit;cursor:pointer;margin-top:8px;transition:all .15s}
+.showmore:active{border-color:var(--bronze);color:var(--bronze2)}
+
+/* No results */
+.nores{background:var(--card);border:1px solid var(--rim);border-radius:11px;
+  padding:24px;text-align:center;color:var(--dim);font-size:13px;line-height:1.7}
+
+/* Empty */
+.empty{text-align:center;padding:48px 12px}
+.eicon{font-size:44px;margin-bottom:12px;opacity:.55}
+.ehed{font-size:16px;font-weight:700;color:var(--parch);margin-bottom:5px}
+.esub{font-size:13px;color:var(--dim);line-height:1.7;margin-bottom:18px}
+.quick{display:flex;flex-wrap:wrap;gap:6px;justify-content:center}
+.qp{padding:7px 13px;border-radius:17px;border:1px solid #2a2a40;
+  background:var(--card);color:var(--dim);font-size:12px;font-family:inherit;cursor:pointer}
+.qp:active{border-color:var(--bronze);color:var(--bronze2)}
+
+/* Footer */
+.foot{margin-top:18px;font-size:10px;color:#2e2e42;text-align:center;line-height:1.7}
+</style>
+</head>
+<body>
+
+<header class="hdr">
+  <div class="hdr-in">
+    <div class="logo">
+      <span style="font-size:20px">⚔️</span>
+      <h1>Sealed Scout</h1>
+    </div>
+    <div class="pill" id="pill">…</div>
+  </div>
+</header>
+
+<div class="tip" id="tip">
+  <p>📲 <b>Save as app:</b> tap Share (↑) in Safari → "Add to Home Screen"</p>
+  <button onclick="document.getElementById('tip').classList.add('gone')">✕</button>
+</div>
+
+<div class="srch">
+  <div class="srch-in">
+    <div class="tabs" id="tabs"></div>
+    <div class="irow">
+      <div class="ibox">
+        <input class="si" type="text" id="si"
+          placeholder="Set name — e.g. Bloomburrow, Duskmourn…"
+          autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false"/>
+        <div class="drop" id="drop"></div>
+      </div>
+      <button class="go" id="goBtn" disabled>Search</button>
+    </div>
+  </div>
+</div>
+
+<div class="scroll"><div class="inner" id="ct"></div></div>
+
+<script>
+'use strict';
+
+// ── Stores ──────────────────────────────────────────────────────────────────
+const STORES = [
+  {name:"Geekery Games",        d:"geekerygames.com",          free:75,  flat:5.99},
+  {name:"Flipside Gaming",      d:"flipsidegaming.com",        free:100, flat:5.99},
+  {name:"ABUGames",             d:"abugames.com",              free:75,  flat:5.99},
+  {name:"AncestralMTG",         d:"ancestralmtg.com",          free:50,  flat:4.99},
+  {name:"Mox Boarding House",   d:"www.moxboardinghouse.com",  free:100, flat:6.99},
+  {name:"Cash Cards Unlimited", d:"cashcardsunlimited.com",    free:99,  flat:4.99},
+  {name:"MysteryMTG",           d:"mysterymtg.com",            free:75,  flat:5.99},
+  {name:"Moonshot Games",       d:"moonshotgamestore.com",     free:50,  flat:5.99},
+  {name:"Nerd Rage Gaming",     d:"www.nerdragegaming.com",    free:75,  flat:5.99},
+  {name:"ChannelFireball",      d:"channelfireball.com",       free:100, flat:5.99},
+  {name:"CoolStuffInc",         d:"www.coolstuffinc.com",      free:100, flat:3.99},
+  {name:"GameNerdz",            d:"www.gamenerdz.com",         free:100, flat:4.99},
+  {name:"Card Kingdom",         d:"www.cardkingdom.com",       free:50,  flat:4.99},
+  {name:"StarCityGames",        d:"starcitygames.com",         free:100, flat:4.99},
+];
+
+const MSRP   = {"Booster Box":144,"Collector Booster Box":239};
+const TYPES  = ["Booster Box","Collector Booster Box"];
+const QUICK  = ["Bloomburrow","Duskmourn","Tarkir: Dragonstorm","Final Fantasy","Foundations","Aetherdrift"];
+const SETS   = [
+  "Tarkir: Dragonstorm","Aetherdrift","Foundations","Duskmourn","Bloomburrow",
+  "Outlaws of Thunder Junction","Murders at Karlov Manor","The Lost Caverns of Ixalan",
+  "Wilds of Eldraine","March of the Machine","Phyrexia: All Will Be One",
+  "The Brothers' War","Dominaria United","Commander Masters","The Lord of the Rings",
+  "Streets of New Capenna","Kamigawa: Neon Dynasty","Innistrad: Crimson Vow",
+  "Midnight Hunt","Adventures in the Forgotten Realms","Strixhaven","Kaldheim",
+  "Zendikar Rising","Ikoria","Throne of Eldraine","Final Fantasy",
+  "Marvel: Spider-Man","Edge of Eternities","Avatar: The Last Airbender",
+];
+
+const PAGE_SIZE = 10;
+
+// ── State ────────────────────────────────────────────────────────────────────
+let selType = "Booster Box";
+let allResults = [];   // full sorted list from last search
+let shownCount = PAGE_SIZE;
+
+// ── DOM ──────────────────────────────────────────────────────────────────────
+const si    = document.getElementById("si");
+const drop  = document.getElementById("drop");
+const goBtn = document.getElementById("goBtn");
+const ct    = document.getElementById("ct");
+
+// Hide install tip when already running as standalone
+if (navigator.standalone) document.getElementById("tip").classList.add("gone");
+
+document.getElementById("pill").innerHTML = `<b>${STORES.length}</b> stores`;
+
+// ── Tabs ─────────────────────────────────────────────────────────────────────
+function renderTabs() {
+  document.getElementById("tabs").innerHTML = TYPES.map(t =>
+    `<button class="tab ${t===selType?"on":"off"}" onclick="setType('${t}')">${t}</button>`
+  ).join("");
+}
+function setType(t) { selType = t; renderTabs(); }
+renderTabs();
+
+// ── Autocomplete ──────────────────────────────────────────────────────────────
+si.addEventListener("input", () => { goBtn.disabled = !si.value.trim(); showDrop(); });
+si.addEventListener("focus", showDrop);
+si.addEventListener("keydown", e => {
+  if (e.key === "Enter") { drop.style.display = "none"; doSearch(); }
+  if (e.key === "Escape") drop.style.display = "none";
+});
+document.addEventListener("touchstart", e => {
+  if (!e.target.closest(".ibox")) drop.style.display = "none";
+}, {passive: true});
+
+function showDrop() {
+  const q = si.value.toLowerCase().trim();
+  const hits = q ? SETS.filter(s => s.toLowerCase().includes(q)) : SETS;
+  if (!hits.length) { drop.style.display = "none"; return; }
+  drop.innerHTML = hits.slice(0, 12).map(s => {
+    const hl = q ? s.replace(new RegExp(`(${q.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")})`, "gi"), "<b>$1</b>") : s;
+    return `<div class="ditem" onmousedown="pick('${s.replace(/'/g,"\\'")}')">${hl}</div>`;
+  }).join("");
+  drop.style.display = "block";
+}
+function pick(s) { si.value = s; drop.style.display = "none"; goBtn.disabled = false; }
+goBtn.addEventListener("click", doSearch);
+
+// ── Product matching ──────────────────────────────────────────────────────────
+// Rules based on real product naming across Shopify MTG stores:
+//   REQUIRED:  title must contain "box"
+//   REQUIRED:  title must contain at least one booster type keyword
+//   REQUIRED:  price >= $50 (singles are always cheap; boxes always $50+)
+//   REQUIRED:  for Collector type, title must contain "collector"
+//   REQUIRED:  for Booster Box type, title must NOT contain "collector"
+//   BLOCKED:   singles, commander decks, bundles, starters, packs (non-box)
+
+const BOOSTER_WORDS = ["play booster","draft booster","set booster","booster box","booster display","booster bundle box"];
+const BLOCK_WORDS   = ["commander deck","precon","bundle","starter kit","starter set",
+                       "single","singles","art card","token","promo","fat pack",
+                       "theme booster","gift edition","land station"];
+
+function isBoosterBox(title, price, isCollector) {
+  const t = title.toLowerCase();
+
+  // Hard price gate — singles and packs are never $50+
+  if (price < 50) return false;
+
+  // Must contain "box"
+  if (!t.includes("box") && !t.includes("display")) return false;
+
+  // Must contain at least one booster-type keyword
+  const hasBooster = BOOSTER_WORDS.some(w => t.includes(w));
+  if (!hasBooster) return false;
+
+  // Collector filter
+  if (isCollector && !t.includes("collector")) return false;
+  if (!isCollector && t.includes("collector")) return false;
+
+  // Block non-box products
+  if (BLOCK_WORDS.some(w => t.includes(w))) return false;
+
+  return true;
+}
+
+function setMatchScore(title, setName) {
+  const t = title.toLowerCase(), s = setName.toLowerCase();
+  const words = s.split(/\s+/).filter(w => w.length > 2);
+  const matched = words.filter(w => t.includes(w)).length;
+  // Require at least half the set-name words to match
+  if (matched < Math.ceil(words.length * 0.5)) return 0;
+  return matched / words.length;
+}
+
+// ── Fetch one store ───────────────────────────────────────────────────────────
+async function fetchStore(store, setName, isCollector) {
+  // Fetch without ?q= because Shopify search is unreliable — filter client-side
+  // We request 250 products (Shopify max per page) and do our own matching
+  const url = `https://${store.d}/products.json?limit=250`;
+  try {
+    const r = await fetch(url, { signal: AbortSignal.timeout(12000) });
+    if (!r.ok) return null;
+    const data = await r.json();
+    if (!Array.isArray(data?.products) || !data.products.length) return null;
+
+    // Score every product
+    const candidates = [];
+    for (const p of data.products) {
+      const title = p.title || "";
+      const variants = (p.variants || []).filter(v =>
+        v.available !== false && parseFloat(v.price) > 0
+      );
+      if (!variants.length) continue;
+
+      const cheapest = variants.sort((a,b) => parseFloat(a.price)-parseFloat(b.price))[0];
+      const price = parseFloat(cheapest.price);
+
+      if (!isBoosterBox(title, price, isCollector)) continue;
+
+      const setScore = setMatchScore(title, setName);
+      if (setScore === 0) continue;
+
+      candidates.push({ p, price, cheapest, setScore });
+    }
+
+    if (!candidates.length) return null;
+
+    // Pick the best-matching product (highest set score, then lowest price)
+    candidates.sort((a,b) => b.setScore - a.setScore || a.price - b.price);
+    const { p, price, cheapest } = candidates[0];
+
+    const shipping = price >= store.free ? "free" : store.flat;
+    const total    = price + (shipping === "free" ? 0 : shipping);
+
+    return {
+      name: store.name,
+      price,
+      total,
+      shipping,
+      title: p.title,
+      url: `https://${store.d}/products/${p.handle}`,
+    };
+  } catch { return null; }
+}
+
+// ── Search ────────────────────────────────────────────────────────────────────
+async function doSearch() {
+  const set = si.value.trim();
+  if (!set) return;
+  drop.style.display = "none";
+  const isCollector = selType.includes("Collector");
+  const msrp = MSRP[selType];
+  allResults = [];
+  shownCount = PAGE_SIZE;
+
+  showLoading(set);
+
+  const raw = await Promise.all(STORES.map(s => fetchStore(s, set, isCollector)));
+  allResults = raw.filter(Boolean).sort((a,b) => a.total - b.total);
+
+  if (!allResults.length) {
+    showNoResults(set); return;
+  }
+
+  renderPage(set, msrp, isCollector);
+}
+
+// ── Render ────────────────────────────────────────────────────────────────────
+function renderPage(set, msrp, isCollector) {
+  const visible = allResults.slice(0, shownCount);
+  const prices  = allResults.map(r => r.price);
+  const totals  = allResults.map(r => r.total);
+  const lowestTotal  = Math.min(...totals);
+  const lowestPrice  = Math.min(...prices);
+  const avg = prices.reduce((a,b)=>a+b,0) / prices.length;
+  const savePct = msrp ? Math.round((1 - lowestPrice/msrp)*100) : null;
+
+  const tcgQ = encodeURIComponent(`${set} ${isCollector?"collector booster box":"play booster box"}`);
+  const tcgUrl = `https://www.tcgplayer.com/search/magic/product?productLineName=magic&q=${tcgQ}&view=grid&productTypeName=Booster+Box`;
+
+  let h = `
+    <!-- Summary -->
+    <div class="sumbar">
+      <div class="sc">
+        <div class="sl">Best Price</div>
+        <div class="sv" style="color:var(--deal)">$${lowestPrice.toFixed(2)}</div>
+        <div class="ss">${savePct !== null ? (savePct>0?`${savePct}% off MSRP`:savePct<0?`${Math.abs(savePct)}% over`:"= MSRP") : ""}</div>
+      </div>
+      <div class="sc">
+        <div class="sl">Avg Price</div>
+        <div class="sv" style="color:var(--bronze2)">$${avg.toFixed(2)}</div>
+        <div class="ss">${allResults.length} stores found</div>
+      </div>
+      <div class="sc">
+        <div class="sl">MSRP</div>
+        <div class="sv" style="color:var(--dim)">${msrp?"$"+msrp:"—"}</div>
+        <div class="ss">suggested retail</div>
+      </div>
+    </div>
+
+    <!-- TCGPlayer link -->
+    <div class="tcgbar">
+      <div>
+        <div class="tcgl">Compare on marketplace</div>
+        <div class="tcgn">TCGPlayer</div>
+      </div>
+      <a class="tcga" href="${tcgUrl}" target="_blank" rel="noopener">Search →</a>
+    </div>
+
+    <!-- Ranked list -->
+    <div class="sec"><span>Ranked by total cost incl. shipping (${allResults.length} stores)</span></div>
+    <div class="rlist" id="rlist">
+  `;
+
+  h += visible.map((r,i) => rowHTML(r, i, lowestTotal, msrp)).join("");
+  h += `</div>`;
+
+  if (allResults.length > shownCount) {
+    const remaining = allResults.length - shownCount;
+    h += `<button class="showmore" id="moreBtn" onclick="showMore('${escQ(set)}',${msrp},${isCollector})">
+      Show ${Math.min(remaining, PAGE_SIZE)} more stores (${remaining} remaining)
+    </button>`;
+  }
+
+  h += `<p class="foot">Prices from live Shopify store data · Verify stock & total at checkout<br>
+    Shipping shown where known · Sorted by total cost including shipping</p>`;
+
+  ct.innerHTML = h;
+}
+
+function rowHTML(r, i, lowestTotal, msrp) {
+  const rank   = i + 1;
+  const rankCls = rank===1?"r1":rank===2?"r2":rank===3?"r3":"";
+
+  // Bar width: best = 100%, others shrink proportionally
+  // Range = difference between most and least expensive (floor at $5 to avoid flat bars)
+  const totals = allResults.map(x=>x.total);
+  const range  = Math.max(Math.max(...totals) - Math.min(...totals), 5);
+  const barPct = Math.round(100 - ((r.total - Math.min(...totals)) / range) * 85);
+  const barColor = rank===1?"#3ecf72":rank<=3?"#d4a245":rank<=6?"#b8812a":"#555";
+
+  const vsMSRP = msrp ? Math.round((1 - r.price/msrp)*100) : null;
+  const chipCls = vsMSRP===null?"" : vsMSRP>5?"dg":vsMSRP>=-5?"dy":"dr";
+  const chipTxt = vsMSRP===null?"" : vsMSRP>0?`-${vsMSRP}% MSRP`:vsMSRP<0?`+${Math.abs(vsMSRP)}% MSRP`:"= MSRP";
+
+  const shipFree = r.shipping === "free";
+  const totalStr = shipFree ? "Free shipping" : `$${r.total.toFixed(2)} with $${r.shipping} shipping`;
+
+  const rowCls = rank===1?"srow best":rank<=4?"srow good":"srow";
+
+  return `
+    <div class="${rowCls}">
+      <div class="rank ${rankCls}">#${rank}</div>
+      <div class="rbody">
+        <div class="rname">${r.name}</div>
+        <div class="rtitle">${r.title}</div>
+        <div class="dbar-track">
+          <div class="dbar-fill" style="width:${barPct}%;background:${barColor}"></div>
+        </div>
+        <div class="rmeta">
+          <span class="ship-tag ${shipFree?"ship-free":"ship-paid"}">${shipFree?"✓ Free ship":`+$${r.shipping} ship`}</span>
+          ${!shipFree?`<span class="total-tag">Total $${r.total.toFixed(2)}</span>`:""}
+          <a class="view-link" href="${r.url}" target="_blank" rel="noopener">View ↗</a>
+        </div>
+      </div>
+      <div class="rprice">
+        <div class="price-main">$${r.price.toFixed(2)}</div>
+        ${msrp?`<div class="price-msrp">$${msrp}</div>`:""}
+        ${chipTxt?`<div class="delta ${chipCls}">${chipTxt}</div>`:""}
+      </div>
+    </div>`;
+}
+
+function showMore(set, msrp, isCollector) {
+  shownCount = Math.min(shownCount + PAGE_SIZE, allResults.length);
+  renderPage(set, msrp, isCollector);
+  // Scroll to newly revealed items
+  const list = document.getElementById("rlist");
+  if (list) list.scrollIntoView({behavior:"smooth", block:"end"});
+}
+
+// ── Loading / no results ──────────────────────────────────────────────────────
+function showLoading(set) {
+  ct.innerHTML = `
+    <div class="loading">
+      <div class="ring"></div>
+      <div class="lmsg">Searching "${set}"…</div>
+      <div class="lsub">Checking ${STORES.length} stores · Filtering for booster boxes only<br>
+        ${STORES.slice(0,5).map(s=>s.name).join(" · ")} + more
+      </div>
+    </div>`;
+}
+
+function showNoResults(set) {
+  ct.innerHTML = `
+    <div class="nores">
+      <div style="font-size:26px;margin-bottom:8px">🔍</div>
+      <div style="font-weight:700;color:var(--parch);margin-bottom:5px">No booster boxes found</div>
+      No stores had a booster box listing matching "<b>${set}</b>" ${selType}.<br><br>
+      Check the set name spelling, or the set may not be in stock yet.<br>
+      Try searching on TCGPlayer directly for current availability.
+    </div>
+    <div class="sec" style="margin-top:16px"><span>Try one of these</span></div>
+    <div class="quick">${QUICK.map(s=>`<button class="qp" onclick="pick('${s}')">${s}</button>`).join("")}</div>`;
+}
+
+// Escape for inline onclick string
+function escQ(s) { return s.replace(/'/g,"\\'"); }
+
+// ── Initial empty state ───────────────────────────────────────────────────────
+ct.innerHTML = `
+  <div class="empty">
+    <div class="eicon">⚔️</div>
+    <div class="ehed">Find the best sealed price</div>
+    <div class="esub">Searches ${STORES.length} LGS stores simultaneously<br>Booster boxes only · Ranked by total cost with shipping</div>
+    <div class="quick">${QUICK.map(s=>`<button class="qp" onclick="pick('${s}')">${s}</button>`).join("")}</div>
+  </div>`;
+</script>
+</body>
+</html>
